@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>AI Manager Assistant Chatbot</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-wrapper">
+        <div class="chat-card">
+            <div class="chat-header">
+                <div class="chat-title">
+                    <div class="chat-avatar">A</div>
+                    <div class="chat-title-text">
+                        <h1>AI Manager Assistant</h1>
+                        <p>Ask about strategy, data analysis, or Titanic ML model</p>
+                    </div>
+                </div>
+                <div class="chat-tag">Powered by GPT & Titanic Model</div>
+            </div>
+
+            <div class="chat-body">
+
+                <div class="chat-main">
+                    <div id="chat-box"></div>
+
+                    <div class="chat-input-area">
+                        <input
+                            type="text"
+                            id="message"
+                            placeholder="Type your question... (e.g. Predict survival age 30 sex female pclass 1 fare 80)"
+                        />
+                        <button id="send-btn" onclick="sendMessage()">
+                            <span>Send</span>
+                            <span class="send-icon">➤</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="chat-sidebar">
+                    <div class="sidebar-section">
+                        <div class="sidebar-title">Quick examples</div>
+                        <div class="pill-list">
+                            <div class="pill" onclick="useExample('Hello')">Hello</div>
+                            <div class="pill" onclick="useExample('What can you do?')">What can you do?</div>
+                            <div class="pill" onclick="useExample('dataset summary')">dataset summary</div>
+                            <div class="pill" onclick="useExample('Predict survival age 30 sex female pclass 1 fare 80')">
+                                Predict survival (Titanic)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-section">
+                        <div class="sidebar-title">Tips</div>
+                        <p class="sidebar-note">
+                            You can ask business questions like:
+                            <br>• "Explain differentiation strategy"
+                            <br>• "What is strategic planning?"
+                            <br>Or trigger data tools with: "dataset summary", "data analysis", "predict survival ..."
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById("chat-box");
+        const input = document.getElementById("message");
+        const sendBtn = document.getElementById("send-btn");
+
+        addSystemMessage("👋 Hi, I am your AI Manager Assistant. Ask me about management, strategy, or Titanic survival predictions.");
+
+        function getTime() {
+            const d = new Date();
+            return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        }
+
+        function addMessage(text, sender) {
+            const row = document.createElement("div");
+            row.className = "message-row " + sender;
+
+            const bubble = document.createElement("div");
+            bubble.className = "bubble " + sender;
+            bubble.textContent = text;
+
+            const time = document.createElement("div");
+            time.className = "timestamp";
+            time.textContent = getTime();
+
+            const container = document.createElement("div");
+            container.style.display = "flex";
+            container.style.flexDirection = "column";
+            container.appendChild(bubble);
+            container.appendChild(time);
+
+            row.appendChild(container);
+
+            chatBox.appendChild(row);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function addSystemMessage(text) {
+            const row = document.createElement("div");
+            row.className = "message-row";
+            const bubble = document.createElement("div");
+            bubble.className = "bubble system";
+            bubble.textContent = text;
+            row.appendChild(bubble);
+            chatBox.appendChild(row);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        let typingRow = null;
+
+        function showTyping() {
+            typingRow = document.createElement("div");
+            typingRow.className = "message-row bot";
+
+            const bubble = document.createElement("div");
+            bubble.className = "bubble bot";
+
+            const indicator = document.createElement("div");
+            indicator.className = "typing-indicator";
+
+            for (let i = 0; i < 3; i++) {
+                const dot = document.createElement("div");
+                dot.className = "typing-dot";
+                indicator.appendChild(dot);
+            }
+
+            bubble.appendChild(indicator);
+            typingRow.appendChild(bubble);
+            chatBox.appendChild(typingRow);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function hideTyping() {
+            if (typingRow && typingRow.parentNode) {
+                chatBox.removeChild(typingRow);
+                typingRow = null;
+            }
+        }
+
+        async function sendMessage() {
+            const text = input.value.trim();
+            if (!text || sendBtn.disabled) return;
+
+            addMessage(text, "user");
+            input.value = "";
+            input.focus();
+
+            sendBtn.disabled = true;
+            showTyping();
+
+            try {
+                const res = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: text }),
+                });
+
+                const data = await res.json();
+                hideTyping();
+                addMessage(data.reply, "bot");
+            } catch (err) {
+                hideTyping();
+                addMessage("⚠️ Error: cannot connect to server.", "bot");
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+
+        input.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+                sendMessage();
+            }
+        });
+
+        function useExample(text) {
+            input.value = text;
+            input.focus();
+        }
+    </script>
+</body>
+</html>
